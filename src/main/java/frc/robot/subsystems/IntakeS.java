@@ -8,8 +8,8 @@ import java.util.function.BooleanSupplier;
 
 import org.photonvision.PhotonCamera;
 
-import com.playingwithfusion.TimeOfFlight;
-import com.playingwithfusion.TimeOfFlight.RangingMode;
+// import com.playingwithfusion.TimeOfFlight;
+// import com.playingwithfusion.TimeOfFlight.RangingMode;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.FaultID;
 import com.revrobotics.CANSparkMax.IdleMode;
@@ -48,7 +48,7 @@ public class IntakeS extends SubsystemBase implements Logged {
    * Set driver mode on the USB camera streamed through PhotonVision
    */
   PhotonCamera handCam = new PhotonCamera("HD_USB_Camera");
-  private final TimeOfFlight distanceSensor = new TimeOfFlight(Constants.IntakeConstants.INTAKE_TOF_CAN_ID);
+  //private final TimeOfFlight distanceSensor = new TimeOfFlight(Constants.IntakeConstants.INTAKE_TOF_CAN_ID);
   private Trigger cubeDebouncedBeamBreak = new Trigger(()->getCurrent() > 20);//.debounce(0.06);
   private Trigger coneDebouncedBeamBreak = new Trigger(()->getCurrent() > 20);
   private LinearFilter currentAverage = LinearFilter.movingAverage(10);
@@ -69,8 +69,8 @@ public class IntakeS extends SubsystemBase implements Logged {
     intakeMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus6, 65535);
     intakeMotor.setSmartCurrentLimit(60, 60);
 
-    distanceSensor.setRangingMode(RangingMode.Short, 999);
-    distanceSensor.setRangeOfInterest(9,9,11,11);
+    // distanceSensor.setRangingMode(RangingMode.Short, 999);
+    // distanceSensor.setRangeOfInterest(9,9,11,11);
     setDefaultCommand(run(()->intakeMotor.setVoltage(0)));
   }
 
@@ -91,7 +91,7 @@ public class IntakeS extends SubsystemBase implements Logged {
     if (RobotBase.isSimulation()) {
       return 0;
     }
-     return -(INTAKE_CENTERED_CONE_DISTANCE - distanceSensor.getRange()) / 1000.0;
+    return 0;// return -(INTAKE_CENTERED_CONE_DISTANCE - distanceSensor.getRange()) / 1000.0;
   }
 
   public boolean hitBeamBreak() {
@@ -104,12 +104,12 @@ public class IntakeS extends SubsystemBase implements Logged {
 
   //@Log
   public double getDistanceSensor() {
-    return distanceSensor.getRange();
+    return 0; //distanceSensor.getRange();
   }
 
   //@Log
   public double getRangeSigma() {
-    return distanceSensor.getRangeSigma();
+    return 0;// distanceSensor.getRangeSigma();
   }
 
   @BothLog
