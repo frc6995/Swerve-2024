@@ -1,9 +1,14 @@
 package frc.robot;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.photonvision.PhotonCamera;
+
+import com.pathplanner.lib.path.PathPlannerTrajectory.State;
 
 import autolog.AutoLog;
 import autolog.Logged;
@@ -11,6 +16,7 @@ import autolog.AutoLog.BothLog;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.LinearFilter;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.BooleanPublisher;
@@ -124,7 +130,8 @@ public class RobotContainer implements Logged {
         addPeriodic.accept(Alert::periodic);
         Timer.delay(0.1);
         m_drivebaseS = new DrivebaseS(addPeriodic, (name, traj) -> {
-            m_field.getObject(name).setTrajectory(traj);
+            m_field.getObject(name).setPoses(
+                traj.getStates().stream().map((Function<State, Pose2d>) (State state)->{return new Pose2d(state.positionMeters, state.targetHolonomicRotation);}).collect(Collectors.toList()));
         });
         m_keypad = new CommandOperatorKeypad(2);
 
@@ -178,7 +185,6 @@ public class RobotContainer implements Logged {
                 false));
         m_driverController.leftTrigger().onTrue(m_autos.armIntakeCG(ArmConstants.GROUND_CUBE_INTAKE_POSITION, true));
 
-        m_driverController.x().whileTrue(m_drivebaseS.leftPlatformAlign());
         m_driverController.x().onTrue(m_autos.armIntakeCG(
             ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT,
             ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT_PRESTOW,
@@ -187,7 +193,6 @@ public class RobotContainer implements Logged {
             ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT,
             ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT_PRESTOW,
             false));
-        m_driverController.y().whileTrue(m_drivebaseS.rightPlatformAlign());
 
         // Button on keypad for pulsing the intake in.
         m_keypad.action().onTrue(m_intakeS.intakeC(m_autos::isCubeSelected).withTimeout(0.5));
@@ -199,15 +204,6 @@ public class RobotContainer implements Logged {
 
     public void addAutoRoutines() {
         m_autoSelector.setDefaultOption("Do Nothing", none());
-        m_autoSelector.addOption("3pc HP", m_autos.highConeHighCubeHPSide().andThen(m_autos.midCubeHPAddon()));
-        m_autoSelector.addOption("3pc Bump", m_autos.highConeHighCubeBumpSide().andThen(m_autos.midCubeBumpAddon()));
-        m_autoSelector.addOption("2.5pc Bump Climb",
-                m_autos.highConeHighCubeBumpSide().andThen(m_autos.cubePickupClimbBumpAddon()));
-        m_autoSelector.addOption("2cone.5cube Bump Climb", m_autos.highConeHighConeCubePickupClimb());
-
-        m_autoSelector.addOption("BumpSide 1 Cone Bal", m_autos.highConeBalance(3));
-        m_autoSelector.addOption("HP Side 1 Cone Bal", m_autos.highConeBalance(5));
-        m_autoSelector.addOption("High Link Bump", m_autos.highConeHighCubeBumpSide().andThen(m_autos.highConeBumpAddon()));
     }
 
     public Command getAutonomousCommand() {

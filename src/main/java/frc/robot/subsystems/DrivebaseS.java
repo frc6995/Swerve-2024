@@ -7,23 +7,37 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.pathplanner.lib.PathConstraints;
-import com.pathplanner.lib.PathPlanner;
-import com.pathplanner.lib.PathPlannerTrajectory;
-import com.pathplanner.lib.PathPoint;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+
+import com.pathplanner.lib.commands.FollowPathHolonomic;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.ConstraintsZone;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
+import com.pathplanner.lib.path.PathPoint;
+import com.pathplanner.lib.path.RotationTarget;
+import com.pathplanner.lib.util.PIDConstants;
 
 import autolog.Logged;
 import autolog.AutoLog.BothLog;
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -35,27 +49,22 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import static frc.robot.Constants.DriveConstants.BL;
-import static frc.robot.Constants.DriveConstants.BR;
-import static frc.robot.Constants.DriveConstants.FL;
-import static frc.robot.Constants.DriveConstants.FR;
 import frc.robot.Constants.DriveConstants.ModuleConstants;
 import frc.robot.POIManager.POIS;
 import frc.robot.subsystems.LightStripS.States;
-import frc.robot.subsystems.VisionWrapper.VisionMeasurement;
 import frc.robot.subsystems.drive.RealSwerveDriveIO;
 import frc.robot.subsystems.drive.SimSwerveDriveIO;
 import frc.robot.subsystems.drive.SwerveDriveIO;
 import frc.robot.Constants;
 import frc.robot.POIManager;
 import frc.robot.Robot;
-import frc.robot.Constants.PoseEstimator;
 
 import static frc.robot.Constants.DriveConstants.*;
 
@@ -65,9 +74,7 @@ import frc.robot.util.AprilTags;
 import frc.robot.util.InputAxis;
 import frc.robot.util.NomadMathUtil;
 import frc.robot.util.trajectory.PPChasePoseCommand;
-import frc.robot.util.trajectory.PPHolonomicDriveController;
-import frc.robot.util.trajectory.PPSwerveControllerCommand;
-import frc.robot.vision.PhotonCameraWrapper;
+import frc.robot.util.trajectory.PathPlannerUtil;
 import autolog.Logged;
 
 /**
@@ -93,8 +100,9 @@ public class DrivebaseS extends SubsystemBase implements Logged {
     // TODO replace this with a TrapezoidProfile delegating to m_thetaController?
     public final ProfiledPIDController m_profiledThetaController = new ProfiledPIDController(3, 0, 0,
             new Constraints(2 * Math.PI, 4 * Math.PI));
-    public final PPHolonomicDriveController m_holonomicDriveController = new PPHolonomicDriveController(m_xController,
-            m_yController, m_thetaController);
+    public final PPHolonomicDriveController m_holonomicDriveController = 
+        new PPHolonomicDriveController(new PIDConstants(8, 0, 0), new PIDConstants(4, 0,0),
+        0.02, Units.feetToMeters(MAX_MODULE_SPEED_FPS), ModuleConstants.FL.centerOffset.getNorm());
 
     private final SwerveDriveKinematics m_kinematics = new SwerveDriveKinematics(
             ModuleConstants.FL.centerOffset,
@@ -109,7 +117,12 @@ public class DrivebaseS extends SubsystemBase implements Logged {
      */
     private final SwerveDrivePoseEstimator m_poseEstimator;
 
-    private final VisionWrapper m_visionWrapper;
+    private final List<PhotonPoseEstimator> m_cameras = List.of(
+            new PhotonPoseEstimator(VisionConstants.TAG_FIELD_LAYOUT, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
+                new PhotonCamera(VisionConstants.CAM_1_NAME), VisionConstants.robotToCam1)
+    );
+    @BothLog
+    private final long[] m_cameraTimestamps = new long[m_cameras.size()];
 
     private Pose2d multitagPose = new Pose2d();
     private final BiConsumer<String, PathPlannerTrajectory> drawTrajectory;
@@ -119,9 +132,8 @@ public class DrivebaseS extends SubsystemBase implements Logged {
         this.drawTrajectory = drawTrajectory;
         m_poseEstimator = new SwerveDrivePoseEstimator(
                 m_kinematics, getHeading(), getModulePositions(), new Pose2d(),
-                Constants.PoseEstimator.STATE_STANDARD_DEVIATIONS,
-                Constants.PoseEstimator.VISION_MEASUREMENT_STANDARD_DEVIATIONS);
-        m_visionWrapper = new VisionWrapper(this::getPoseHeading);
+                VecBuilder.fill(0.1,0.1, 1000),
+                VecBuilder.fill(1, 1, Math.PI));
         m_thetaController.setTolerance(Units.degreesToRadians(0.5));
         m_thetaController.enableContinuousInput(-Math.PI, Math.PI);
         m_profiledThetaController.setTolerance(Units.degreesToRadians(0.5));
@@ -148,29 +160,45 @@ public class DrivebaseS extends SubsystemBase implements Logged {
     public void periodic() {
 
         m_poseEstimator.update(getHeading(), getModulePositions());
-        //m_visionWrapper.findVisionMeasurements();
-        /*
-         * Process all vision measurements taken since the last periodic iteration
-         */
-        VisionMeasurement measurement;
-        while ((measurement = m_visionWrapper.drainVisionMeasurement()) != null) {
-            var estimation = measurement.estimation();
-            var estimatedPose = estimation.estimatedPose;
-            // Check height of final pose for sanity. Robot should never be more than 0.5 m off the ground.
-            if (Math.abs(estimatedPose.getZ()) > 0.5) {
-                continue;
+        if (RobotBase.isReal()) {
+            for (PhotonPoseEstimator estimator: m_cameras) {
+                var robotPoseOpt = estimator.update();
+                if (robotPoseOpt.isEmpty()) { continue;}
+                var robotPose = robotPoseOpt.get();
+                var confidence = AprilTags.calculateVisionUncertainty(
+                    robotPose.estimatedPose.getX(),
+                    getPoseHeading(),
+                    new Rotation2d(estimator.getRobotToCameraTransform().getRotation().getZ()));
+                m_poseEstimator.addVisionMeasurement(
+                    robotPose.estimatedPose.toPose2d(),
+                    robotPose.timestampSeconds,
+                    confidence);
             }
-            // Skip single-tag measurements with too-high ambiguity.
-            if (estimation.targetsUsed.size() < 2
-                    && estimation.targetsUsed.get(0).getBestCameraToTarget().getTranslation().getNorm() > Units.feetToMeters(13)) {
-                continue;
-            }
-            multitagPose = measurement.estimation().estimatedPose.toPose2d();
-            m_poseEstimator.addVisionMeasurement(
-                    multitagPose,
-                    measurement.estimation().timestampSeconds,
-                    measurement.confidence());
         }
+
+        // //m_visionWrapper.findVisionMeasurements();
+        // /*
+        //  * Process all vision measurements taken since the last periodic iteration
+        //  */
+        // VisionMeasurement measurement;
+        // while ((measurement = m_visionWrapper.drainVisionMeasurement()) != null) {
+        //     var estimation = measurement.estimation();
+        //     var estimatedPose = estimation.estimatedPose;
+        //     // Check height of final pose for sanity. Robot should never be more than 0.5 m off the ground.
+        //     if (Math.abs(estimatedPose.getZ()) > 0.5) {
+        //         continue;
+        //     }
+        //     // Skip single-tag measurements with too-high ambiguity.
+        //     if (estimation.targetsUsed.size() < 2
+        //             && estimation.targetsUsed.get(0).getBestCameraToTarget().getTranslation().getNorm() > Units.feetToMeters(13)) {
+        //         continue;
+        //     }
+        //     multitagPose = measurement.estimation().estimatedPose.toPose2d();
+        //     m_poseEstimator.addVisionMeasurement(
+        //             multitagPose,
+        //             measurement.estimation().timestampSeconds,
+        //             measurement.confidence());
+        // }
     }
 
     /**
@@ -334,8 +362,8 @@ public class DrivebaseS extends SubsystemBase implements Logged {
     public Command resetPoseToBeginningC(PathPlannerTrajectory trajectory) {
         return Commands.runOnce(() -> resetPose(NomadMathUtil.mirrorPose(
                 new Pose2d(
-                        trajectory.getInitialState().poseMeters.getTranslation(),
-                        trajectory.getInitialState().holonomicRotation),
+                        trajectory.getInitialState().positionMeters,
+                        trajectory.getInitialState().targetHolonomicRotation),
                 AllianceWrapper.getAlliance())));
     }
 
@@ -399,7 +427,7 @@ public class DrivebaseS extends SubsystemBase implements Logged {
      * Returns a Translation2d representing the linear robot speed in field
      * coordinates.
      */
-    public Translation2d getFieldRelativeLinearSpeedsMPS() {
+    public ChassisSpeeds getFieldRelativeLinearSpeedsMPS() {
         // Get robot relative speeds from module states
         ChassisSpeeds robotRelativeSpeeds = m_kinematics.toChassisSpeeds(getModuleStates());
         // Get field relative speeds by undoing the field-robot conversion (which was
@@ -409,16 +437,7 @@ public class DrivebaseS extends SubsystemBase implements Logged {
                 robotRelativeSpeeds.vyMetersPerSecond,
                 robotRelativeSpeeds.omegaRadiansPerSecond,
                 getPoseHeading().unaryMinus());
-        // Convert to translation
-        Translation2d translation = new Translation2d(fieldRelativeSpeeds.vxMetersPerSecond,
-                fieldRelativeSpeeds.vyMetersPerSecond);
-        // to avoid angle issues near 0, if the distance is 0.01 or less just return (0,
-        // 0)
-        if (translation.getNorm() < 0.01) {
-            return new Translation2d();
-        } else {
-            return translation;
-        }
+        return robotRelativeSpeeds;
     }
 
     /**
@@ -429,6 +448,12 @@ public class DrivebaseS extends SubsystemBase implements Logged {
      */
     public void drawRobotOnField(Field2d field) {
         field.setRobotPose(getPose());
+        ChassisSpeeds speeds = getFieldRelativeLinearSpeedsMPS();
+        Transform2d transform = new Transform2d(
+            speeds.vxMetersPerSecond,
+            speeds.vyMetersPerSecond,
+            new Rotation2d(speeds.omegaRadiansPerSecond));
+        field.getObject("future").setPose(getPose().transformBy(transform));
         field.getObject("multitag").setPose(multitagPose);
         // Draw a pose that is based on the robot pose, but shifted by the translation
         // of the module relative to robot center,
@@ -485,25 +510,25 @@ public class DrivebaseS extends SubsystemBase implements Logged {
         ));
     }
 
-    /**
-     * Command factory to drive a PathPlanner path.
-     * Paths are assumed to be created on the blue side, and will be automatically flipped.
-     * @param path the path to run.
-     * @return
-     */
-    public Command pathPlannerCommand(PathPlannerTrajectory path) {
-        PPSwerveControllerCommand command = new PPSwerveControllerCommand(
-                path,
-                this::getPose,
-                m_xController,
-                m_yController,
-                m_thetaController,
+    // /**
+    //  * Command factory to drive a PathPlanner path.
+    //  * Paths are assumed to be created on the blue side, and will be automatically flipped.
+    //  * @param path the path to run.
+    //  * @return
+    //  */
+    // public Command pathPlannerCommand(PathPlannerTrajectory path) {
+    //     FollowPathHolonomic command = new FollowPathHolonomic(
+    //             path,
+    //             this::getPose,
+    //             m_xController,
+    //             m_yController,
+    //             m_thetaController,
 
-                this::drive,
-                true,
-                this);
-        return command;
-    }
+    //             this::drive,
+    //             true,
+    //             this);
+    //     return command;
+    // }
 
     /**
      * For use with PPChasePoseCommand
@@ -516,137 +541,133 @@ public class DrivebaseS extends SubsystemBase implements Logged {
      * 
      * @param robotPose             the current robot pose
      * @param target                the target pose
-     * @param currentSpeedVectorMPS a Translation2d where x and y are the robot's x
+     * @param currentSpeeds a Translation2d where x and y are the robot's x
      *                              and y field-relative speeds in m/s.
      * @return a PathPlannerTrajectory to the target pose.
      */
     public static PathPlannerTrajectory generateTrajectoryToPose(Pose2d robotPose, Pose2d target,
-            Translation2d currentSpeedVectorMPS, PathConstraints constraints) {
+            ChassisSpeeds currentSpeeds, PathConstraints constraints) {
 
-        // Robot velocity calculated from module states.
-        Rotation2d fieldRelativeTravelDirection = NomadMathUtil.getDirection(currentSpeedVectorMPS);
-        double travelSpeed = currentSpeedVectorMPS.getNorm();
+        // // Robot velocity calculated from module states.
+        Rotation2d fieldRelativeTravelDirection = new Rotation2d(currentSpeeds.vxMetersPerSecond, currentSpeeds.vyMetersPerSecond);
+        // double travelSpeed = currentSpeeds.getNorm();
 
         Translation2d robotToTargetTranslation = target.getTranslation().minus(robotPose.getTranslation());
-        // Initial velocity override is the component of robot velocity along the
-        // robot-to-target vector.
-        // If the robot velocity is pointing away from the target, start at 0 velocity.
-        Rotation2d travelOffsetFromTarget = NomadMathUtil.getDirection(robotToTargetTranslation)
-                .minus(fieldRelativeTravelDirection);
-        travelSpeed = Math.max(0, travelSpeed * travelOffsetFromTarget.getCos());
+        // // Initial velocity override is the component of robot velocity along the
+        // // robot-to-target vector.
+        // // If the robot velocity is pointing away from the target, start at 0 velocity.
+        // Rotation2d travelOffsetFromTarget = NomadMathUtil.getDirection(robotToTargetTranslation)
+        //         .minus(fieldRelativeTravelDirection);
+        // travelSpeed = Math.max(0, travelSpeed * travelOffsetFromTarget.getCos());
         // We only want to regenerate if the target is far enough away from the robot.
         // PathPlanner has issues with near-zero-length paths and we need a particular
         // tolerance for success anyway.
-        if (robotToTargetTranslation.getNorm() > 0.1) {
-            PathPlannerTrajectory pathPlannerTrajectory = PathPlanner.generatePath(
-                    constraints,
+            PathPlannerPath pathPlannerTrajectory = new PathPlannerPath(
+                    PathPlannerUtil.bezierFromPoses(
+                        List.of(
+                        new Pose2d(robotPose.getTranslation(), robotToTargetTranslation.getAngle()),
+                        new Pose2d(target.getTranslation(), robotToTargetTranslation.getAngle()))),
+                    List.of(),
+                    // List.of(new RotationTarget(0, robotPose.getRotation()),
+                    //     new RotationTarget(1, target.getRotation())),
+                    List.of(),
+                    List.of(),
                     // Start point. At the position of the robot, initial travel direction toward
                     // the target,
                     // robot rotation as the holonomic rotation, and putting in the (possibly 0)
                     // velocity override.
-                    new PathPoint(
-                            robotPose.getTranslation(),
-                            NomadMathUtil.getDirection(robotToTargetTranslation),
-                            robotPose.getRotation(),
-                            travelSpeed), // position, heading
-                    // position, heading
-                    new PathPoint(
-                            target.getTranslation(),
-                            NomadMathUtil.getDirection(robotToTargetTranslation),
-                            target.getRotation()) // position, heading
+                    constraints, new GoalEndState(0, target.getRotation()), false
             );
-            return pathPlannerTrajectory;
-        }
 
-        return new PathPlannerTrajectory();
+            return new PathPlannerTrajectory(pathPlannerTrajectory, new ChassisSpeeds(0, 0, 0));
     }
 
-    public static PathPlannerTrajectory generateTrajectoryToPickup(Pose2d robotPose, Pose2d target,
-            Translation2d currentSpeedVectorMPS, PathConstraints constraints) {
-        double backupDistance = 0.2;
-        int towardsPlatX = AllianceWrapper.isBlue() ? 1 : -1;
-        Pose2d midWaypoint = new Pose2d(target.getTranslation().plus(new Translation2d(backupDistance * -towardsPlatX,0)), target.getRotation());
-        Pose2d backupWaypoint;
-        boolean useBackupWaypoint = Math.abs(robotPose.getX() - target.getX()) < backupDistance;
-        // back away from one platform if we're at the other
-        if (useBackupWaypoint) {
-            backupWaypoint = 
-                new Pose2d(target.getX() - backupDistance * towardsPlatX, robotPose.getY(), robotPose.getRotation());
-        } else {
-            backupWaypoint = midWaypoint;
-        }
-        // get the 
-        // Robot velocity calculated from module states.
-        Rotation2d fieldRelativeTravelDirection = NomadMathUtil.getDirection(currentSpeedVectorMPS);
-        double travelSpeed = currentSpeedVectorMPS.getNorm();
+    // public static PathPlannerTrajectory generateTrajectoryToPickup(Pose2d robotPose, Pose2d target,
+    //         Translation2d currentSpeedVectorMPS, PathConstraints constraints) {
+    //     double backupDistance = 0.2;
+    //     int towardsPlatX = AllianceWrapper.isBlue() ? 1 : -1;
+    //     Pose2d midWaypoint = new Pose2d(target.getTranslation().plus(new Translation2d(backupDistance * -towardsPlatX,0)), target.getRotation());
+    //     Pose2d backupWaypoint;
+    //     boolean useBackupWaypoint = Math.abs(robotPose.getX() - target.getX()) < backupDistance;
+    //     // back away from one platform if we're at the other
+    //     if (useBackupWaypoint) {
+    //         backupWaypoint = 
+    //             new Pose2d(target.getX() - backupDistance * towardsPlatX, robotPose.getY(), robotPose.getRotation());
+    //     } else {
+    //         backupWaypoint = midWaypoint;
+    //     }
+    //     // get the 
+    //     // Robot velocity calculated from module states.
+    //     Rotation2d fieldRelativeTravelDirection = NomadMathUtil.getDirection(currentSpeedVectorMPS);
+    //     double travelSpeed = currentSpeedVectorMPS.getNorm();
 
-        Translation2d robotToTargetTranslation = target.getTranslation().minus(robotPose.getTranslation());
-        Translation2d robotToMidTranslation = midWaypoint.getTranslation().minus(robotPose.getTranslation());
-        Translation2d initialSegmentTranslation = backupWaypoint.getTranslation().minus(robotPose.getTranslation());
-        Translation2d approachToEndTranslation = target.getTranslation().minus(midWaypoint.getTranslation());
-        // Initial velocity override is the component of robot velocity along the
-        // robot-to-target vector.
-        // If the robot velocity is pointing away from the target, start at 0 velocity.
-        Rotation2d travelOffsetFromTarget = NomadMathUtil.getDirection(initialSegmentTranslation)
-                .minus(fieldRelativeTravelDirection);
-        travelSpeed = Math.max(0, travelSpeed * travelOffsetFromTarget.getCos());
+    //     Translation2d robotToTargetTranslation = target.getTranslation().minus(robotPose.getTranslation());
+    //     Translation2d robotToMidTranslation = midWaypoint.getTranslation().minus(robotPose.getTranslation());
+    //     Translation2d initialSegmentTranslation = backupWaypoint.getTranslation().minus(robotPose.getTranslation());
+    //     Translation2d approachToEndTranslation = target.getTranslation().minus(midWaypoint.getTranslation());
+    //     // Initial velocity override is the component of robot velocity along the
+    //     // robot-to-target vector.
+    //     // If the robot velocity is pointing away from the target, start at 0 velocity.
+    //     Rotation2d travelOffsetFromTarget = NomadMathUtil.getDirection(initialSegmentTranslation)
+    //             .minus(fieldRelativeTravelDirection);
+    //     travelSpeed = Math.max(0, travelSpeed * travelOffsetFromTarget.getCos());
 
-        PathPoint initialPoint = new PathPoint(
-            robotPose.getTranslation(),
-            NomadMathUtil.getDirection(initialSegmentTranslation),
-            robotPose.getRotation(),
-            travelSpeed);
-        PathPoint backupPoint = new PathPoint(
-            // Go through the backup waypoint
-            backupWaypoint.getTranslation(),
-            // 
-            NomadMathUtil.getDirection(initialSegmentTranslation),
-            backupWaypoint.getRotation()
-            );
-        PathPoint approachPoint = new PathPoint(
-            midWaypoint.getTranslation(),
+    //     PathPoint initialPoint = new PathPoint(
+    //         robotPose.getTranslation(),
+    //         NomadMathUtil.getDirection(initialSegmentTranslation),
+    //         robotPose.getRotation(),
+    //         travelSpeed);
+    //     PathPoint backupPoint = new PathPoint(
+    //         // Go through the backup waypoint
+    //         backupWaypoint.getTranslation(),
+    //         // 
+    //         NomadMathUtil.getDirection(initialSegmentTranslation),
+    //         backupWaypoint.getRotation()
+    //         );
+    //     PathPoint approachPoint = new PathPoint(
+    //         midWaypoint.getTranslation(),
 
-            NomadMathUtil.getDirection(approachToEndTranslation),
-            target.getRotation(), 0.5);
-        PathPoint endPoint = new PathPoint(
-            target.getTranslation(),
-            NomadMathUtil.getDirection(approachToEndTranslation),
-            target.getRotation());
-        // We only want to regenerate if the target is far enough away from the robot.
-        // PathPlanner has issues with near-zero-length paths and we need a particular
-        // tolerance for success anyway.
-        if (robotToTargetTranslation.getNorm() > backupDistance) {
-            if (useBackupWaypoint) {
-                return PathPlanner.generatePath(
-                    constraints,
-                    // Start point. At the position of the robot, initial travel direction toward
-                    // the target,
-                    // robot rotation as the holonomic rotation, and putting in the (possibly 0)
-                    // velocity override.
-                    initialPoint, // position, heading
-                    // position, heading
-                    backupPoint, // position, heading
-                    approachPoint, // position, heading
-                    endPoint // position, heading
-            );
-            } else {
-                return PathPlanner.generatePath(
-                    constraints,
-                    // Start point. At the position of the robot, initial travel direction toward
-                    // the target,
-                    // robot rotation as the holonomic rotation, and putting in the (possibly 0)
-                    // velocity override.
-                    initialPoint, // position, heading
-                    // position, heading
-                    approachPoint, // position, heading
-                    endPoint // position, heading
-            );
-            }
+    //         NomadMathUtil.getDirection(approachToEndTranslation),
+    //         target.getRotation(), 0.5);
+    //     PathPoint endPoint = new PathPoint(
+    //         target.getTranslation(),
+    //         NomadMathUtil.getDirection(approachToEndTranslation),
+    //         target.getRotation());
+    //     // We only want to regenerate if the target is far enough away from the robot.
+    //     // PathPlanner has issues with near-zero-length paths and we need a particular
+    //     // tolerance for success anyway.
+    //     if (robotToTargetTranslation.getNorm() > backupDistance) {
+    //         if (useBackupWaypoint) {
+    //             return PathPlanner.generatePath(
+    //                 constraints,
+    //                 // Start point. At the position of the robot, initial travel direction toward
+    //                 // the target,
+    //                 // robot rotation as the holonomic rotation, and putting in the (possibly 0)
+    //                 // velocity override.
+    //                 initialPoint, // position, heading
+    //                 // position, heading
+    //                 backupPoint, // position, heading
+    //                 approachPoint, // position, heading
+    //                 endPoint // position, heading
+    //         );
+    //         } else {
+    //             return PathPlanner.generatePath(
+    //                 constraints,
+    //                 // Start point. At the position of the robot, initial travel direction toward
+    //                 // the target,
+    //                 // robot rotation as the holonomic rotation, and putting in the (possibly 0)
+    //                 // velocity override.
+    //                 initialPoint, // position, heading
+    //                 // position, heading
+    //                 approachPoint, // position, heading
+    //                 endPoint // position, heading
+    //         );
+    //         }
 
-        }
+    //     }
 
-        return new PathPlannerTrajectory();
-    }
+    //     return new PathPlannerTrajectory();
+    // }
 
 
     /**
@@ -665,52 +686,33 @@ public class DrivebaseS extends SubsystemBase implements Logged {
                 targetSupplier,
                 this::getPose,
                 m_holonomicDriveController,
+                m_xController,
+                m_yController,
+                m_thetaController,
                 this::drive,
                 (PathPlannerTrajectory traj) -> {
                     drawTrajectory.accept("align", traj);
                 }, // empty output for current trajectory.
                 (startPose, endPose) -> DrivebaseS.generateTrajectoryToPose(startPose, endPose,
-                        getFieldRelativeLinearSpeedsMPS(), new PathConstraints(2, 2)),
+                        getFieldRelativeLinearSpeedsMPS(), new PathConstraints(2, 2, 2*Math.PI, 2*Math.PI)),
                 this)
             .alongWith(LightStripS.getInstance().stateC(()->States.Climbing));
     }
 
-    public Command chasePickupC(Supplier<Pose2d> targetSupplier) {
-        return new PPChasePoseCommand(
-                targetSupplier,
-                this::getPose,
-                m_holonomicDriveController,
-                this::drive,
-                (PathPlannerTrajectory traj) -> {
-                    drawTrajectory.accept("pickup", traj);
-                }, // empty output for current trajectory.
-                (startPose, endPose) -> DrivebaseS.generateTrajectoryToPickup(startPose, endPose,
-                        getFieldRelativeLinearSpeedsMPS(), new PathConstraints(3, 1.5)),
-                this);
-    }
+    // public Command chasePickupC(Supplier<Pose2d> targetSupplier) {
+    //     return new PPChasePoseCommand(
+    //             targetSupplier,
+    //             this::getPose,
+    //             m_holonomicDriveController,
+    //             this::drive,
+    //             (PathPlannerTrajectory traj) -> {
+    //                 drawTrajectory.accept("pickup", traj);
+    //             }, // empty output for current trajectory.
+    //             (startPose, endPose) -> DrivebaseS.generateTrajectoryToPickup(startPose, endPose,
+    //                     getFieldRelativeLinearSpeedsMPS(), new PathConstraints(3, 1.5)),
+    //             this);
+    // }
 
-    /**
-     * A command factory for auto-aligning to the charge station.
-     * Aligns to the centerline of the charge station, at the robot's current y-coordinate.
-     * Uses higher vel/accel constraints compared to normal auto-align
-     * @return
-     */
-    public Command chargeStationAlignC() {
-        return new PPChasePoseCommand(
-                () -> new Pose2d(
-                        POIS.CHARGE_STATION.ownPose().getX(),
-                        getPose().getY(),
-                        getPose().getRotation()),
-                this::getPose,
-                m_holonomicDriveController,
-                this::drive,
-                (PathPlannerTrajectory traj) -> {
-                }, // empty output for current trajectory.
-                (startPose, endPose) -> DrivebaseS.generateTrajectoryToPose(startPose, endPose,
-                        getFieldRelativeLinearSpeedsMPS(),
-                        new PathConstraints(2, 3)),
-                this);
-    }
 
     /**
      * Command factory for manual drive.
@@ -821,10 +823,10 @@ public class DrivebaseS extends SubsystemBase implements Logged {
         );
     }
 
-    public Command leftPlatformAlign() {
-        return chasePickupC(()-> POIManager.ownPOI(AllianceWrapper.isRed() ? POIS.GRID_PLAT : POIS.WALL_PLAT));
-    }
-    public Command rightPlatformAlign() {
-        return chasePickupC(()-> POIManager.ownPOI(AllianceWrapper.isRed() ? POIS.WALL_PLAT : POIS.GRID_PLAT));
-    }
+    // public Command leftPlatformAlign() {
+    //     return chasePickupC(()-> POIManager.ownPOI(AllianceWrapper.isRed() ? POIS.GRID_PLAT : POIS.WALL_PLAT));
+    // }
+    // public Command rightPlatformAlign() {
+    //     return chasePickupC(()-> POIManager.ownPOI(AllianceWrapper.isRed() ? POIS.WALL_PLAT : POIS.GRID_PLAT));
+    // }
 }

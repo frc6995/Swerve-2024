@@ -1,12 +1,13 @@
 package frc.robot.util;
 
+import java.util.Optional;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class AllianceWrapper {
-    private static Alliance currentAlliance = Alliance.Invalid;
+    private static Alliance currentAlliance = Alliance.Red;
     public static Alliance getAlliance() {
-        currentAlliance = DriverStation.getAlliance();
         return currentAlliance;
     }
     public static void setAlliance(Alliance newAlliance) {

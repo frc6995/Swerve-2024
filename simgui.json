@@ -1,0 +1,54 @@
+{
+  "HALProvider": {
+    "Addressable LEDs": {
+      "window": {
+        "visible": true
+      }
+    }
+  },
+  "NTProvider": {
+    "types": {
+      "/DriverDisplay/field": "Field2d",
+      "/FMSInfo": "FMSInfo",
+      "/Robot/m_armS/MECH_VISUALIZER": "Mechanism2d",
+      "/Robot/m_field": "Field2d",
+      "/SmartDashboard/SendableChooser[0]": "String Chooser"
+    },
+    "windows": {
+      "/Robot/m_armS/MECH_VISUALIZER": {
+        "window": {
+          "visible": true
+        }
+      },
+      "/Robot/m_field": {
+        "align": {
+          "arrows": false,
+          "style": "Line"
+        },
+        "bottom": 544,
+        "builtin": "2023 Charged Up",
+        "future": {
+          "color": [
+            19.36710548400879,
+            255.0,
+            0.0,
+            255.0
+          ]
+        },
+        "height": 8.013679504394531,
+        "left": 46,
+        "right": 1088,
+        "top": 36,
+        "width": 16.541748046875,
+        "window": {
+          "visible": true
+        },
+        "zmodules": {
+          "length": 0.4000000059604645,
+          "style": "Hidden",
+          "width": 0.4000000059604645
+        }
+      }
+    }
+  }
+}

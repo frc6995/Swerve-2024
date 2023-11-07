@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -31,7 +32,7 @@ public class Robot extends TimedRobot {
         robotContainer = new RobotContainer((fn)->this.addPeriodic(fn, kDefaultPeriod));
         //DataLogManager.logNetworkTables(true);
         addPeriodic(()->{
-            AllianceWrapper.setAlliance(DriverStation.getAlliance());
+            AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
         }, 0.5);
         
         System.gc();
@@ -46,7 +47,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void autonomousInit() {
-        AllianceWrapper.setAlliance(DriverStation.getAlliance());
+        AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
         robotContainer.onEnabled();
         autonomousCommand = robotContainer.getAutonomousCommand();
 
@@ -56,7 +57,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopInit() {
-        AllianceWrapper.setAlliance(DriverStation.getAlliance());
+        AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
         robotContainer.onEnabled();
         if (autonomousCommand != null) autonomousCommand.cancel();
 

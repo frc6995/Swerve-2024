@@ -1,7 +1,7 @@
 package frc.robot.util;
 import java.util.function.Supplier;
 
-import com.pathplanner.lib.PathPlannerTrajectory.PathPlannerState;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.revrobotics.REVLibError;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -60,24 +60,23 @@ public class NomadMathUtil {
         return new SwerveModuleState(desiredState.speedMetersPerSecond, desiredState.angle);
         }
   }
-    public static PathPlannerState mirrorState(
-        PathPlannerState blueState
+    public static PathPlannerTrajectory.State mirrorState(
+        PathPlannerTrajectory.State blueState
     ) {
-        PathPlannerState newState = new PathPlannerState();
-        newState.accelerationMetersPerSecondSq = blueState.accelerationMetersPerSecondSq;
-        newState.angularVelocityRadPerSec = -blueState.angularVelocityRadPerSec;
+        PathPlannerTrajectory.State newState = new PathPlannerTrajectory.State();
+        newState.accelerationMpsSq = blueState.accelerationMpsSq;
         newState.curvatureRadPerMeter = -blueState.curvatureRadPerMeter;
-        newState.holonomicAngularVelocityRadPerSec = -blueState.holonomicAngularVelocityRadPerSec;
-        newState.holonomicRotation = Rotation2d.fromRadians(Math.PI - blueState.holonomicRotation.getRadians());
-        newState.poseMeters = new Pose2d(FIELD_LENGTH - blueState.poseMeters.getX(), blueState.poseMeters.getY(), 
-            Rotation2d.fromRadians(Math.PI - blueState.poseMeters.getRotation().getRadians()));
+        newState.headingAngularVelocityRps = -blueState.headingAngularVelocityRps;
+        newState.targetHolonomicRotation = Rotation2d.fromRadians(Math.PI - blueState.targetHolonomicRotation.getRadians());
+        newState.positionMeters = new Translation2d(FIELD_LENGTH - blueState.positionMeters.getX(), blueState.positionMeters.getY());
         newState.timeSeconds = blueState.timeSeconds;
-        newState.velocityMetersPerSecond = blueState.velocityMetersPerSecond;
+        newState.velocityMps = newState.velocityMps;
+        newState.constraints = blueState.constraints;
         return newState;
     }
 
-    public static PathPlannerState mirrorState(
-        PathPlannerState blueState, DriverStation.Alliance alliance
+    public static PathPlannerTrajectory.State mirrorState(
+        PathPlannerTrajectory.State blueState, DriverStation.Alliance alliance
     ) {
         if (alliance != Alliance.Red) {
             return blueState;

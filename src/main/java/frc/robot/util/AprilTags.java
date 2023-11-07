@@ -8,7 +8,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class AprilTags {
-    public static Matrix<N3, N1> calculateVisionUncertainty(double poseX, Rotation2d heading, Rotation2d cameraYaw, String cameraName) {
+    public static Matrix<N3, N1> calculateVisionUncertainty(double poseX, Rotation2d heading, Rotation2d cameraYaw) {
         double maximumUncertainty = 3;
         double minimumUncertainty = 0.1;
         double a = 6;
@@ -44,11 +44,6 @@ public class AprilTags {
             }
         }
         double positionUncertainty = ((maximumUncertainty-minimumUncertainty)/(1+Math.pow(Math.E, (a+(b*distanceFromTagSide)))))+minimumUncertainty;
-
-        SmartDashboard.putNumber("Debug/Cameras/"+cameraName+"/Distance From Tag Side", distanceFromTagSide);
-        SmartDashboard.putNumber("Debug/Cameras/"+cameraName+"/Vision Uncertainty", positionUncertainty);
-        SmartDashboard.putBoolean("Debug/Cameras/"+cameraName+"/Facing Red Alliance", facingRedAlliance);
-
         return VecBuilder.fill(positionUncertainty,positionUncertainty,10000);
     }
 }

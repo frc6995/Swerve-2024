@@ -4,11 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import org.photonvision.PhotonCamera;
+import org.photonvision.simulation.PhotonCameraSim;
+import org.photonvision.simulation.SimCameraProperties;
+
 import autolog.AutoLog.BothLog;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.Constants.VisionConstants;
 import frc.robot.util.NomadMathUtil;
 import frc.robot.util.sim.SimGyroSensorModel;
 import frc.robot.util.sim.wpiClasses.QuadSwerveSim;
@@ -20,7 +25,6 @@ public class SimSwerveDriveIO extends SwerveDriveIO {
     private final List<SwerveModuleSim> m_moduleSims;
     private final QuadSwerveSim m_quadSwerveSim;
     private SimGyroSensorModel m_simNavx = new SimGyroSensorModel();
-
     public SimSwerveDriveIO(Consumer<Runnable> addPeriodic) {
         super(addPeriodic);
         m_modules = List.of(
