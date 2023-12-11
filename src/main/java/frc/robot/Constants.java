@@ -20,15 +20,8 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Filesystem;
-import frc.robot.subsystems.ArmS.ArmPosition;
 
 public class Constants {
-
-    public static final class InputDevices {
-
-        public static final int GAMEPAD_PORT = 0;
-
-    }
 
     public static final class DriveConstants {
         static public final double WHEEL_BASE_WIDTH_M = Units.inchesToMeters(18.5);
@@ -55,10 +48,10 @@ public class Constants {
         static private double HW = WHEEL_BASE_WIDTH_M/2.0;
 
         public enum ModuleConstants {
-            FL("FL", 18, 17, 6, 5.651346 + 0.005 + 0.01 - 0.03 + 0.025 -0.013012, HW, HW),
-            FR("FR", 12, 11, 7, 3.762759 - 0.003 + 0.002 + 0.01 + 0.025 - 0.002 + 0.003020, HW, -HW),
-            BL("BL", 16, 15, 8, 1.823007 + 0.01 + 0.001 - 0.03 - 0.011 -0.003, + 0.002141 -HW, HW),
-            BR("BR", 14, 13, 9, 5.614791 - 0.008 - 0.04 - 0.03 + 0.11-0.005 - 0.011 + 0.002034, -HW, -HW);
+            FL("FL", 18, 17, 6, 5.648334, HW, HW),
+            FR("FR", 12, 11, 7, 3.797779, HW, -HW),
+            BL("BL", 16, 15, 8, 1.792148, -HW, HW),
+            BR("BR", 14, 13, 9, 5.632825, -HW, -HW);
     
             public final String name;
             public final int driveMotorID;
@@ -77,7 +70,6 @@ public class Constants {
                 this.magEncoderID = magEncoderID;
                 this.magEncoderOffset = magEncoderOffset;
                 centerOffset = new Translation2d(xOffset, yOffset);
-    
             }
         }
         
@@ -142,7 +134,7 @@ public class Constants {
             new Translation3d(-CAM_X, -CAM_Y, CAM_HEIGHT), 
             new Rotation3d(0, CAM_PITCH, (Math.PI) + CAM_YAW + Units.degreesToRadians(5.5)));
         
-        public static AprilTagFieldLayout TAG_FIELD_LAYOUT = 
+        public static AprilTagFieldLayout TAG_FIELD_LAYOUT =
         new AprilTagFieldLayout(
             List.of(
                 new AprilTag(
@@ -185,200 +177,10 @@ public class Constants {
                         new Pose3d(
                         1.02743, 1.071626, 0.462788, new Rotation3d(0, 0, 0))
                         )
-
-
-
-
             ),
             16.54175,
             8.0137
         );
     }
 
-        /**
-     * Pose estimation from FRC 5026 Iron Panthers, used by permission
-     */
-    public static final class Vision {
-        public static record VisionSource(String name, Transform3d robotToCamera) {}
-    
-        public static final List<VisionSource> VISION_SOURCES =
-            List.of(
-                new VisionSource(
-                    VisionConstants.CAM_1_NAME,
-                    VisionConstants.robotToCam1),
-                new VisionSource(
-                    VisionConstants.CAM_2_NAME,
-                   VisionConstants.robotToCam2),
-                new VisionSource(
-                    VisionConstants.CAM_3_NAME,
-                    VisionConstants.robotToCam3),
-                new VisionSource(
-                    VisionConstants.CAM_4_NAME,
-                   VisionConstants.robotToCam4));
-    
-        public static final int THREAD_SLEEP_DURATION_MS = 20;
-      }
-
-    public static final class ArmConstants {
-
-
-        /* EXTEND */
-        
-        public static final int EXTEND_MOTOR_ID = 20;
-
-        //Arm length measured from shoulder pivot to wrist pivot
-        public static final double MIN_ARM_LENGTH = Units.inchesToMeters(19.875);
-        public static final double MAX_ARM_LENGTH = 1.497;
-
-        public static final Translation2d ARM_PIVOT_TRANSLATION = new Translation2d(0, Units.inchesToMeters(18.69));
-        
-        public static final double EXTEND_DRUM_RADIUS = 0.022238;
-        public static final double EXTEND_DRUM_ROTATIONS_PER_MOTOR_ROTATION = 1.0/9.0;
-        public static final double EXTEND_METERS_PER_DRUM_ROTATION = Math.PI * 2 * EXTEND_DRUM_RADIUS * 2; // 2x distance
-
-        public static final double ARM_EXTEND_KG_VERTICAL = 0.41 * 16.0/9.0;
-        public static final double ARM_EXTEND_KS = 0.15 * 16.0/9.0;
-        public static final double ARM_EXTEND_KV = 1.31 * 5.5 * 9.0/16.0;//12 /*v*//(5676 /*rpm */ * EXTEND_METERS_PER_DRUM_ROTATION * EXTEND_DRUM_ROTATIONS_PER_MOTOR_ROTATION / 60);
-        public static final double ARM_EXTEND_KA = 0.12 * 16.0/9.0;
-        /* PIVOT */
-        public static final double MIN_ARM_ANGLE = 5.86 - 2*Math.PI;
-        /** DO NOT INCREASE! arm will crunch cable chain */
-        public static final double MAX_ARM_ANGLE = Math.PI + 0.5;
-        public static final double ARM_ROTATIONS_PER_MOTOR_ROTATION = 1.0/225.0; //(1.0/25.0) * (16.0/60.0);
-
-        public static final double PIVOT_ENCODER_OFFSET = 0.423 * Math.PI * 2.0 + 0.025;
-
-        public static final double ARM_MASS_KILOS = Units.lbsToKilograms(17);
-
-        public static final double ARM_MOI_SHRUNK = 0.7975;
-        
-        public static final int PIVOT_MOTOR_ID = 22;
-        public static final int PIVOT_FOLLOWER_MOTOR_ID = 23;
-        public static final double PIVOT_KS = 0.11 * 0;
-        public static final double ARM_PIVOT_KG_MIN_EXTEND = 0.1;//1.414 * (ARM_ROTATIONS_PER_MOTOR_ROTATION * 400) / 2 / Math.cos(Units.degreesToRadians(10.5));
-        public static final double ARM_PIVOT_KG_MAX_EXTEND = 1;//0.13 / Math.cos(0.707);//2.872 * (ARM_ROTATIONS_PER_MOTOR_ROTATION * 400) / 2 / Math.cos(Units.degreesToRadians(10.5));
-
-        public static final double PIVOT_MAX_VELOCITY = 2.38; // rad/s
-        public static final double PIVOT_MAX_ACCEL = 5; //rad/s/s
-
-        /* WRIST/HAND */
-
-        // Wrist angle is relative to the extension of the telescope.
-        // I.e. 0 is straight out from the pivot.
-        // positive angles match pivot (up and over, with 0 being straight out the robot front)
-        public static final int WRIST_MOTOR_ID = 25;
-        public static final double WRIST_ROTATIONS_PER_MOTOR_ROTATION = 1.0/31.0303;
-        public static final double WRIST_ENCODER_OFFSET = 0.0972610;//5.382308 - Math.PI;//0.995;
-        public static final double HAND_LENGTH = Units.inchesToMeters(6);
-        public static final double HAND_MASS_KILOS = Units.lbsToKilograms(5);
-      
-        public static final double WRIST_MIN_ANGLE = Units.degreesToRadians(-127);
-        public static final double WRIST_MAX_ANGLE = Units.degreesToRadians(65);
-        public static final double WRIST_KG = 5.744 * 1.6 * 5 * 0.25 / (31.030);
-
-        public static class ArmPositions {
-            public static final ArmPosition STOW = new ArmPosition(
-                Units.degreesToRadians(65),
-                MIN_ARM_LENGTH,
-                WRIST_MAX_ANGLE
-            );
-            public static final ArmPosition CUBE_STOW = new ArmPosition(
-                1.35,
-                MIN_ARM_LENGTH,
-                WRIST_MIN_ANGLE
-            );
-            public static final ArmPosition FRONT_PLATFORM_CONE_UPRIGHT = new ArmPosition(
-                1.227, 0.982 , -2.02
-            );
-            public static final ArmPosition FRONT_PLATFORM_CONE_UPRIGHT_PRESTOW = new ArmPosition(
-                ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT.pivotRadians,
-                ArmPositions.FRONT_PLATFORM_CONE_UPRIGHT.armLength,
-                Units.degreesToRadians(-40));
-            public static final ArmPosition BACK_TIPPED_FLOOR = new ArmPosition(
-                3.63,
-                0.541,
-                0.083);
-            public static final ArmPosition BACK_TIPPED_FLOOR_PRESTOW = new ArmPosition(
-                STOW.pivotRadians,
-                STOW.armLength,
-                0.083);
-
-
-            public static final ArmPosition FRONT_UP_FLOOR = new ArmPosition(
-                -0.02, STOW.armLength, -0.8);
-        }
-
-        public static final ArmPosition SCORE_HIGH_CONE_POSITION = new ArmPosition(
-            0.72,
-            1.447 ,
-            -1.14);
-        public static final ArmPosition SCORE_HIGH_CUBE_POSITION = new ArmPosition(
-            0.65,
-            1.07,
-            -1.666);
-        public static final ArmPosition SCORE_MID_CONE_POSITION = new ArmPosition(
-            0.775,
-            0.900,
-            -1.155);
-        public static final ArmPosition SCORE_MID_CONE_RETRACTED_POSITION = new ArmPosition(
-            SCORE_MID_CONE_POSITION.pivotRadians,
-            0.58,
-            SCORE_MID_CONE_POSITION.wristRadians);
-        public static final ArmPosition SCORE_HIGH_CONE_RETRACTED_POSITION = new ArmPosition(
-            SCORE_HIGH_CONE_POSITION.pivotRadians,
-            0.58,
-            SCORE_HIGH_CONE_POSITION.wristRadians);
-        public static final ArmPosition SCORE_MID_CUBE_POSITION = new ArmPosition(
-            0.72,
-            0.58,
-            -1.79);
-        public static final ArmPosition STOW_POSITION = ArmPositions.STOW;
-        public static final ArmPosition GROUND_CUBE_INTAKE_POSITION = new ArmPosition(
-            3.61,
-            STOW_POSITION.armLength,
-            -0.663);
-        public static final ArmPosition CLIMBING_POSITION = new ArmPosition(
-            0.3 - Units.degreesToRadians(3),
-            MIN_ARM_LENGTH + Units.inchesToMeters(0.125),
-            WRIST_MAX_ANGLE - Units.degreesToRadians(1)
-        );
-        public static final ArmPosition SCORE_HYBRID_POSITION = ArmPositions.CUBE_STOW;
-
-        
-    }
-
-
-    public static final class IntakeConstants {
-        public static final int INTAKE_CAN_ID = 30; 
-        public static final double INTAKE_VOLTAGE = 11;
-        public static final int INTAKE_EXTEND = 0;
-        public static final int INTAKE_RETRACT= 1;
-
-        public static final int INTAKE_TOF_CAN_ID = 32;
-        public static final double INTAKE_CENTERED_CONE_DISTANCE = 157.0;
-    }
-
-    public static final class LightConstants {
-        public static final double LED_BOUNCE_GREEN = 0.77;
-        public static final double LED_SINELON_OCEAN = -0.75;
-        public static final double LED_LIGHT_CHASE_RED = -0.31;
-        public static final double LED_PARTY_MODE = -0.43;
-        public static final double LED_SOLID_YELLOW = 0.69;
-        public static final double LED_SOLID_VIOLET = 0.91;
-        public static final double LED_STROBE_GOLD = -0.07;
-
-        public static final int PWM_PORT_LED = 0;
-    }
-
-    public static final class LightStripConstants {
-        public static final double LED_BOUNCE_GREEN = 0.77;
-        public static final double LED_SINELON_OCEAN = -0.75;
-        public static final double LED_LIGHT_CHASE_RED = -0.31;
-        public static final double LED_PARTY_MODE = -0.43;
-        public static final double LED_SOLID_YELLOW = 0.69;
-        public static final double LED_SOLID_VIOLET = 0.91;
-        public static final double LED_STROBE_GOLD = -0.07;
-
-        public static final int PWM_PORT_LED = 0;
-    }
 }
