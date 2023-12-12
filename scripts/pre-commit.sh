@@ -1,9 +1,14 @@
 #!/bin/sh
 
-echo "*****Running formatter******"
-
+#!/bin/sh
+# Part 1
+stagedFiles=$(git diff --staged --name-only)
+# Part 2
+echo "Running spotlessApply. Formatting code..."
 ./gradlew spotlessApply
-
-echo "*****Done with formatter******"
-
-exit $status
+# Part 3
+for file in $stagedFiles; do
+  if test -f "$file"; then
+    git add $file
+  fi
+done
