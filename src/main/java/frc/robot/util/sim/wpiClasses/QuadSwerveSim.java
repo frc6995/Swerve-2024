@@ -54,7 +54,7 @@ public class QuadSwerveSim {
             new Transform2d(robotToModuleTL.get(BL), new Rotation2d(0.0)),
             new Transform2d(robotToModuleTL.get(BR), new Rotation2d(0.0)));
 
-    this.robotMass_kg = robotMass_kg;
+    this.robotMass_kg =robotMass_kg;
     this.robotMOI = robotMOI;
   }
 
