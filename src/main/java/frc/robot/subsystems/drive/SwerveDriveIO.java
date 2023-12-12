@@ -49,7 +49,6 @@ public abstract class SwerveDriveIO implements Logged {
     private void periodic() {
         updateModulePositions();
         updateModuleStates();
-        //m_modules.forEach(ModuleIO::updateAlerts);
     }
 
     public void setModuleStates(SwerveModuleState[] moduleStates) {
@@ -89,6 +88,10 @@ public abstract class SwerveDriveIO implements Logged {
     public void reinitRotationEncoders() {
         m_modules.forEach(ModuleIO::reinitRotationEncoder);
     }
+
+    /**
+     * Reset 
+     */
     public void resetModuleSteerControllers() {
         m_modules.forEach(ModuleIO::resetSteerController);
     }

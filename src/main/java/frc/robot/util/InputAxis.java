@@ -4,7 +4,6 @@ import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.MathUtil;
 import frc.robot.util.drive.AsymmetricSlewRateLimiter;
-import autolog.Logged;
 
 /**
  * An extension of DoubleSupplier designed for pre-processing driver controller axis inputs.

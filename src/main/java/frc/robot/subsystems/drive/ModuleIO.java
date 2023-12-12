@@ -2,24 +2,19 @@ package frc.robot.subsystems.drive;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
 import frc.robot.Robot;
-import frc.robot.util.Alert;
-import frc.robot.util.Alert.AlertType;
 import autolog.Logged;
 
 import static frc.robot.Constants.DriveConstants.*;
 
 import java.util.function.Consumer;
 
-import autolog.AutoLog.BothLog;
 import autolog.AutoLog.BothLog;
 
 public abstract class ModuleIO implements Logged {
@@ -47,7 +42,6 @@ public abstract class ModuleIO implements Logged {
     // steering PID controller
     // drive PID controller
     protected final ModuleConstants m_moduleConstants;
-    private final Alert m_pinionSlipAlert;
 
     private SwerveModuleState m_desiredState = new SwerveModuleState();
 
@@ -55,7 +49,6 @@ public abstract class ModuleIO implements Logged {
         m_moduleConstants = moduleConstants;
         m_loggingName = moduleConstants.name + "-[" + moduleConstants.driveMotorID + ','
                 + moduleConstants.rotationMotorID + ']';
-        m_pinionSlipAlert = new Alert(moduleConstants.name, "Check pinion slip", AlertType.ERROR);
         m_steerPIDController = new PIDController(
                 10 / (Math.PI), 0.0, STEER_D);
         // Tell the PID controller that it can move across the -pi to pi rollover point.
@@ -69,9 +62,6 @@ public abstract class ModuleIO implements Logged {
         addPeriodic.accept(this::setState);
     }
 
-    public void updateAlerts() {
-        m_pinionSlipAlert.set(Math.abs(getPinionSlip()) > Units.degreesToRadians(10));
-    }
 
     public String getPath() {
         System.out.println(m_loggingName);

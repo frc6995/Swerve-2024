@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.pathplanner.lib.path.PathPlannerTrajectory.State;
 
@@ -19,8 +18,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.DrivebaseS;
-import frc.robot.subsystems.LightStripS;
-import frc.robot.subsystems.LightStripS.States;
 import autolog.Logged;
 
 /**

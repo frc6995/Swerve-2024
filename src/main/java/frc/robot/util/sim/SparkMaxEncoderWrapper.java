@@ -4,7 +4,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVLibError;
 import com.revrobotics.RelativeEncoder;
 
-import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.Robot;
 
 public class SparkMaxEncoderWrapper {

@@ -1,8 +1,5 @@
 package frc.robot.util;
 
-import java.util.Optional;
-
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class AllianceWrapper {

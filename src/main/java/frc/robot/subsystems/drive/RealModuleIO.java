@@ -1,6 +1,5 @@
 package frc.robot.subsystems.drive;
 
-import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
@@ -9,7 +8,6 @@ import com.revrobotics.SparkMaxAbsoluteEncoder.Type;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.Timer;
-import frc.robot.Robot;
 import frc.robot.Constants.DriveConstants.ModuleConstants;
 import frc.robot.util.sim.SparkMaxAbsoluteEncoderWrapper;
 import frc.robot.util.sparkmax.SparkMax;

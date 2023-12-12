@@ -1,15 +1,11 @@
 package frc.robot.subsystems.drive;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.SPI.Port;
 import frc.robot.Constants.DriveConstants.ModuleConstants;
-import frc.robot.NavX.AHRS;
 
 public class RealSwerveDriveIO extends SwerveDriveIO {
     public RealSwerveDriveIO(Consumer<Runnable> addPeriodic) {

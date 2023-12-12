@@ -6,7 +6,6 @@ package frc.robot.util.sim;
 
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import frc.robot.Robot;
 
