@@ -18,7 +18,7 @@ public class SimModuleIO extends ModuleIO {
     public SimModuleIO(Consumer<Runnable> addPeriodic, ModuleConstants moduleConstants) {
         super(addPeriodic, moduleConstants);
         moduleSim.resetAzmth(Math.random() * 2 * Math.PI);
-        // TODO Auto-generated constructor stub
+        
     }
 
     static SwerveModuleSim swerveSimModuleFactory() {
@@ -89,7 +89,7 @@ public class SimModuleIO extends ModuleIO {
 
     @Override
     public double getRelativeAngle() {
-        // TODO Auto-generated method stub
+        
         return moduleSim.getAzimuthEncoderPositionRev() / AZMTH_ENC_COUNTS_PER_MODULE_REV * 2 * Math.PI;
     }
 

@@ -37,7 +37,7 @@ public class SimSwerveDriveIO extends SwerveDriveIO {
                 ROBOT_MOI_KGM2,
                 m_moduleSims);
         addPeriodic.accept(this::periodic);
-        // TODO Auto-generated constructor stub
+        
     }
 
     private void periodic() {

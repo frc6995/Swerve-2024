@@ -64,7 +64,7 @@ public class RealModuleIO extends ModuleIO {
         m_magEncoder = new SparkMaxAbsoluteEncoderWrapper(m_steerMotor,m_moduleConstants.magEncoderOffset);
         m_steerMotor.setIdleMode(IdleMode.kBrake);
         addPeriodic.accept(this::updateEncoders);
-        // TODO Auto-generated constructor stub
+        
     }
 
     public void updateEncoders() {
@@ -88,25 +88,24 @@ public class RealModuleIO extends ModuleIO {
 
     @Override
     public double getDriveDistance() {
-        // TODO Auto-generated method stub
         return m_driveDistance;
     }
 
     @Override
     public double getDriveVelocity() {
-        // TODO Auto-generated method stub
+        
         return m_driveVelocity;
     }
 
     @Override
     public double getAngle() {
-        // TODO Auto-generated method stub
+        
         return m_steerAngle;
     }
 
     @Override
     public double getRelativeAngle() {
-        // TODO Auto-generated method stub
+        
         return 0;//m_steerMotor.getEncoder().getPosition();
     }
     @Override
