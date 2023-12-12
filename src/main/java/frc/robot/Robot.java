@@ -1,13 +1,11 @@
 package frc.robot;
 
-import autolog.AutoLog;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -15,70 +13,70 @@ import frc.robot.util.AllianceWrapper;
 
 public class Robot extends TimedRobot {
 
-    private static boolean isSimulation = false;
-    
-    private RobotContainer robotContainer;
+  private static boolean isSimulation = false;
 
-    private Command autonomousCommand;
+  private RobotContainer robotContainer;
 
-    private NetworkTableEntry matchTimeEntry = NetworkTableInstance.getDefault().getEntry("/DriverDisplay/matchTime");
-    @Override
-    public void robotInit() {
-        
-        Robot.isSimulation = RobotBase.isSimulation();
-        DriverStation.silenceJoystickConnectionWarning(true);
+  private Command autonomousCommand;
 
-        LiveWindow.disableAllTelemetry();
-        robotContainer = new RobotContainer((fn)->this.addPeriodic(fn, kDefaultPeriod));
-        //DataLogManager.logNetworkTables(true);
-        addPeriodic(()->{
-            AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
-        }, 0.5);
-        
-        System.gc();
-    }
+  private NetworkTableEntry matchTimeEntry =
+      NetworkTableInstance.getDefault().getEntry("/DriverDisplay/matchTime");
 
-    @Override
-    public void robotPeriodic() {
-        CommandScheduler.getInstance().run();
-        robotContainer.periodic();
-        matchTimeEntry.setNumber(DriverStation.getMatchTime());
-    }
+  @Override
+  public void robotInit() {
 
-    @Override
-    public void autonomousInit() {
-        AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
-        robotContainer.onEnabled();
-        autonomousCommand = robotContainer.getAutonomousCommand();
+    Robot.isSimulation = RobotBase.isSimulation();
+    DriverStation.silenceJoystickConnectionWarning(true);
 
-        if (autonomousCommand != null) autonomousCommand.schedule();
+    LiveWindow.disableAllTelemetry();
+    robotContainer = new RobotContainer((fn) -> this.addPeriodic(fn, kDefaultPeriod));
+    // DataLogManager.logNetworkTables(true);
+    addPeriodic(
+        () -> {
+          AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
+        },
+        0.5);
 
-    }
+    System.gc();
+  }
 
-    @Override
-    public void teleopInit() {
-        AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
-        robotContainer.onEnabled();
-        if (autonomousCommand != null) autonomousCommand.cancel();
+  @Override
+  public void robotPeriodic() {
+    CommandScheduler.getInstance().run();
+    robotContainer.periodic();
+    matchTimeEntry.setNumber(DriverStation.getMatchTime());
+  }
 
-    }
+  @Override
+  public void autonomousInit() {
+    AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
+    robotContainer.onEnabled();
+    autonomousCommand = robotContainer.getAutonomousCommand();
 
-    @Override
-    public void disabledInit() {
-        robotContainer.onDisabled();
-        System.gc();
-    }
-    @Override
-    public void disabledPeriodic() {
-        
-    }
+    if (autonomousCommand != null) autonomousCommand.schedule();
+  }
 
-    public static boolean isSimulation() {
-        return isSimulation;
-    }
+  @Override
+  public void teleopInit() {
+    AllianceWrapper.setAlliance(DriverStation.getAlliance().orElse(Alliance.Red));
+    robotContainer.onEnabled();
+    if (autonomousCommand != null) autonomousCommand.cancel();
+  }
 
-    public static boolean isReal() {
-        return !isSimulation;
-    }
+  @Override
+  public void disabledInit() {
+    robotContainer.onDisabled();
+    System.gc();
+  }
 
+  @Override
+  public void disabledPeriodic() {}
+
+  public static boolean isSimulation() {
+    return isSimulation;
+  }
+
+  public static boolean isReal() {
+    return !isSimulation;
+  }
 }

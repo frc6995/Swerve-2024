@@ -1,8 +1,9 @@
 package frc.robot.subsystems.drive;
 
-import java.util.List;
-import java.util.function.Consumer;
+import static frc.robot.Constants.DriveConstants.*;
 
+import autolog.AutoLog.BothLog;
+import autolog.Logged;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Quaternion;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -12,101 +13,104 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.SPI.Port;
 import frc.robot.NavX.AHRS;
-import autolog.Logged;
-import autolog.AutoLog.BothLog;
-
-import static frc.robot.Constants.DriveConstants.*;
+import java.util.List;
+import java.util.function.Consumer;
 
 public abstract class SwerveDriveIO implements Logged {
-    protected final AHRS m_navx = new AHRS(Port.kMXP, (byte) 50);
-    protected List<ModuleIO> m_modules;
+  protected final AHRS m_navx = new AHRS(Port.kMXP, (byte) 50);
+  protected List<ModuleIO> m_modules;
 
-    private SwerveModuleState[] currentStates = new SwerveModuleState[] { new SwerveModuleState(),
-            new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState() };
-    private SwerveModulePosition[] currentPositions = new SwerveModulePosition[] {
-            new SwerveModulePosition(),
-            new SwerveModulePosition(),
-            new SwerveModulePosition(),
-            new SwerveModulePosition()
-    };
+  private SwerveModuleState[] currentStates =
+      new SwerveModuleState[] {
+        new SwerveModuleState(),
+        new SwerveModuleState(),
+        new SwerveModuleState(),
+        new SwerveModuleState()
+      };
+  private SwerveModulePosition[] currentPositions =
+      new SwerveModulePosition[] {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+      };
 
-    public SwerveDriveIO(Consumer<Runnable> addPeriodic) {
-        addPeriodic.accept(this::periodic);
-        m_navx.reset();
-        m_navx.enableLogging(true);
+  public SwerveDriveIO(Consumer<Runnable> addPeriodic) {
+    addPeriodic.accept(this::periodic);
+    m_navx.reset();
+    m_navx.enableLogging(true);
+  }
+
+  @Override
+  public String getPath() {
+    return "io";
+  }
+
+  @BothLog
+  public Rotation2d getGyroHeading() {
+    return m_navx.getRotation2d();
+  }
+
+  private void periodic() {
+    updateModulePositions();
+    updateModuleStates();
+  }
+
+  public void setModuleStates(SwerveModuleState[] moduleStates) {
+    for (int i = 0; i < NUM_MODULES; i++) {
+      m_modules.get(i).setDesiredState(moduleStates[i]);
     }
+  }
 
+  public SwerveModuleState[] getModuleStates() {
+    return currentStates;
+  }
 
-    @Override
-    public String getPath() {
-        return "io";
+  public SwerveModulePosition[] getCurrentPositions() {
+    return currentPositions;
+  }
+
+  private void updateModuleStates() {
+    for (int i = 0; i < NUM_MODULES; i++) {
+      currentStates[i] = m_modules.get(i).getCurrentState();
     }
-    @BothLog
-    public Rotation2d getGyroHeading() {
-        return m_navx.getRotation2d();
+  }
+
+  private void updateModulePositions() {
+    for (int i = 0; i < NUM_MODULES; i++) {
+      currentPositions[i] = m_modules.get(i).getCurrentPosition();
     }
+  }
 
-    private void periodic() {
-        updateModulePositions();
-        updateModuleStates();
-    }
+  public void resetDistances() {
+    m_modules.forEach((module) -> module.resetDistance());
+  }
 
-    public void setModuleStates(SwerveModuleState[] moduleStates) {
-        for (int i = 0; i < NUM_MODULES; i++) {
-            m_modules.get(i).setDesiredState(moduleStates[i]);
-        }
-    }
+  public abstract void resetPose(Pose2d pose);
 
-    public SwerveModuleState[] getModuleStates() {
-        return currentStates;
-    }
+  public abstract void resetIMU();
 
-    public SwerveModulePosition[] getCurrentPositions() {
-        return currentPositions;
-    }
+  public void reinitRotationEncoders() {
+    m_modules.forEach(ModuleIO::reinitRotationEncoder);
+  }
 
-    private void updateModuleStates() {
-        for (int i = 0; i < NUM_MODULES; i++) {
-            currentStates[i] = m_modules.get(i).getCurrentState();
-        }
-    }
+  /** Reset */
+  public void resetModuleSteerControllers() {
+    m_modules.forEach(ModuleIO::resetSteerController);
+  }
 
-    private void updateModulePositions() {
-        for (int i = 0; i < NUM_MODULES; i++) {
-            currentPositions[i] = m_modules.get(i).getCurrentPosition();
-        }
-    }
+  public abstract Pose2d getSimPose();
 
-    public void resetDistances() {
-        m_modules.forEach((module) -> module.resetDistance());
-    }
+  public Rotation3d getRotation3d() {
+    return new Rotation3d(
+        new Quaternion(
+            m_navx.getQuaternionW(),
+            m_navx.getQuaternionX(),
+            m_navx.getQuaternionY(),
+            m_navx.getQuaternionZ()));
+  }
 
-    public abstract void resetPose(Pose2d pose);
-
-    public abstract void resetIMU();
-
-    public void reinitRotationEncoders() {
-        m_modules.forEach(ModuleIO::reinitRotationEncoder);
-    }
-
-    /**
-     * Reset 
-     */
-    public void resetModuleSteerControllers() {
-        m_modules.forEach(ModuleIO::resetSteerController);
-    }
-
-    public abstract Pose2d getSimPose();
-
-    public Rotation3d getRotation3d() {
-        return new Rotation3d(new Quaternion(
-                m_navx.getQuaternionW(),
-                m_navx.getQuaternionX(),
-                m_navx.getQuaternionY(),
-                m_navx.getQuaternionZ()));
-    }
-
-    public double getPitch() {
-        return Units.degreesToRadians(m_navx.getPitch());
-    }
+  public double getPitch() {
+    return Units.degreesToRadians(m_navx.getPitch());
+  }
 }

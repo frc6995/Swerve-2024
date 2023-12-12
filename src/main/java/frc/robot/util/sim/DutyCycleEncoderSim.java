@@ -21,12 +21,12 @@ public class DutyCycleEncoderSim {
    * @param encoder DutyCycleEncoder to simulate
    */
   public DutyCycleEncoderSim(DutyCycleEncoder encoder) {
-    if(Robot.isSimulation()) {
+    if (Robot.isSimulation()) {
       SimDeviceSim wrappedSimDevice =
-      new SimDeviceSim("DutyCycle:DutyCycleEncoder" + "[" + encoder.getSourceChannel() + "]");
-  m_simPosition = wrappedSimDevice.getDouble("position");
-  m_simAbsolutePosition = wrappedSimDevice.getDouble("absPosition");
-  m_simDistancePerRotation = wrappedSimDevice.getDouble("distance_per_rot");
+          new SimDeviceSim("DutyCycle:DutyCycleEncoder" + "[" + encoder.getSourceChannel() + "]");
+      m_simPosition = wrappedSimDevice.getDouble("position");
+      m_simAbsolutePosition = wrappedSimDevice.getDouble("absPosition");
+      m_simDistancePerRotation = wrappedSimDevice.getDouble("distance_per_rot");
     }
   }
 
@@ -36,10 +36,9 @@ public class DutyCycleEncoderSim {
    * @param turns The position.
    */
   public void set(double turns) {
-    if(Robot.isSimulation()) {
+    if (Robot.isSimulation()) {
       m_simPosition.set(turns);
     }
-
   }
 
   /**
@@ -48,17 +47,14 @@ public class DutyCycleEncoderSim {
    * @param distance The position.
    */
   public void setDistance(double distance) {
-    if(Robot.isSimulation()){
+    if (Robot.isSimulation()) {
       m_simPosition.set(distance / m_simDistancePerRotation.get());
     }
-
   }
 
   public void setAbsolutePosition(double distance) {
-    if(Robot.isSimulation()) {
+    if (Robot.isSimulation()) {
       m_simAbsolutePosition.set(distance / m_simDistancePerRotation.get());
     }
-
   }
-
 }

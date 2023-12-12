@@ -242,6 +242,7 @@ public class TiltedElevatorSim extends LinearSystemSim<N2, N1, N1> {
   public void setAngleFromHorizontal(double angle) {
     m_angleFromHorizontal = angle;
   }
+
   /**
    * Updates the state of the elevator.
    *

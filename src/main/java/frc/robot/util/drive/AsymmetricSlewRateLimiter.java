@@ -23,19 +23,22 @@ public class AsymmetricSlewRateLimiter {
    * Creates a new SlewRateLimiter with the given positive and negative rate limits and initial
    * value.
    *
-   * @param positiveMagnitudeRateLimit The rate-of-change limit in the positive direction, in units per
-   *     second. This is expected to be positive.
-   * @param negativeMagnitudeRateLimit The rate-of-change limit in the negative direction, in units per
-   *     second. This is expected to be negative.
+   * @param positiveMagnitudeRateLimit The rate-of-change limit in the positive direction, in units
+   *     per second. This is expected to be positive.
+   * @param negativeMagnitudeRateLimit The rate-of-change limit in the negative direction, in units
+   *     per second. This is expected to be negative.
    * @param initialValue The initial value of the input.
    */
-  public AsymmetricSlewRateLimiter(double positiveMagnitudeRateLimit, double negativeMagnitudeRateLimit, double initialValue) {
+  public AsymmetricSlewRateLimiter(
+      double positiveMagnitudeRateLimit, double negativeMagnitudeRateLimit, double initialValue) {
     m_positiveMagnitudeRateLimit = positiveMagnitudeRateLimit;
     m_negativeMagnitudeRateLimit = negativeMagnitudeRateLimit;
     m_prevVal = initialValue;
     m_prevTime = MathSharedStore.getTimestamp();
   }
-  public AsymmetricSlewRateLimiter(double positiveMagnitudeRateLimit, double negativeMagnitudeRateLimit) {
+
+  public AsymmetricSlewRateLimiter(
+      double positiveMagnitudeRateLimit, double negativeMagnitudeRateLimit) {
     m_positiveMagnitudeRateLimit = positiveMagnitudeRateLimit;
     m_negativeMagnitudeRateLimit = negativeMagnitudeRateLimit;
     m_prevVal = 0;
@@ -74,18 +77,17 @@ public class AsymmetricSlewRateLimiter {
     double distanceToCover = input - m_prevVal;
     // if decreasing while still positive, or increasing while still negative
     if (Math.signum(m_prevVal) == -Math.signum(distanceToCover)) {
-        m_prevVal +=
-        MathUtil.clamp(
-            input - m_prevVal,
-            -Math.abs(m_negativeMagnitudeRateLimit) * elapsedTime,
-            Math.abs(m_negativeMagnitudeRateLimit) * elapsedTime);
-    }
-    else {
-        m_prevVal +=
-        MathUtil.clamp(
-            input - m_prevVal,
-            -Math.abs(m_positiveMagnitudeRateLimit) * elapsedTime,
-            Math.abs(m_positiveMagnitudeRateLimit) * elapsedTime);
+      m_prevVal +=
+          MathUtil.clamp(
+              input - m_prevVal,
+              -Math.abs(m_negativeMagnitudeRateLimit) * elapsedTime,
+              Math.abs(m_negativeMagnitudeRateLimit) * elapsedTime);
+    } else {
+      m_prevVal +=
+          MathUtil.clamp(
+              input - m_prevVal,
+              -Math.abs(m_positiveMagnitudeRateLimit) * elapsedTime,
+              Math.abs(m_positiveMagnitudeRateLimit) * elapsedTime);
     }
 
     m_prevTime = currentTime;
@@ -102,4 +104,3 @@ public class AsymmetricSlewRateLimiter {
     m_prevTime = MathSharedStore.getTimestamp();
   }
 }
-
