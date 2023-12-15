@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2024.1.1-beta-3"
+    id 'com.diffplug.spotless' version '6.21.0' apply false
 }
 
 java {
@@ -8,6 +9,7 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+apply from: "./format.gradle"
 def ROBOT_MAIN_CLASS = "frc.robot.Main"
 
 // Define my targets (RoboRIO) and artifacts (deployable files)

@@ -45,7 +45,8 @@ public class FieldObject3d implements AutoCloseable {
    * @param yMeters Y location, in meters
    * @param rotation rotation
    */
-  public synchronized void setPose(double xMeters, double yMeters, double zMeters, Rotation3d rotation) {
+  public synchronized void setPose(
+      double xMeters, double yMeters, double zMeters, Rotation3d rotation) {
     setPose(new Pose3d(xMeters, yMeters, zMeters, rotation));
   }
 
@@ -156,13 +157,11 @@ public class FieldObject3d implements AutoCloseable {
       m_poses.clear();
       for (int i = 0; i < arr.length; i += 7) {
         m_poses.add(
-          new Pose3d(
-            arr[i], arr[i + 1], arr[i+2],
-            new Rotation3d(
-              new Quaternion(arr[i+3],arr[i+4],arr[i+5],arr[i+6])
-            )
-          )
-        );
+            new Pose3d(
+                arr[i],
+                arr[i + 1],
+                arr[i + 2],
+                new Rotation3d(new Quaternion(arr[i + 3], arr[i + 4], arr[i + 5], arr[i + 6]))));
       }
     }
   }

@@ -61,7 +61,8 @@ public class Field3d implements NTSendable, AutoCloseable {
    * @param yMeters Y location, in meters
    * @param rotation rotation
    */
-  public synchronized void setRobotPose(double xMeters, double yMeters, double zMeters, Rotation3d rotation) {
+  public synchronized void setRobotPose(
+      double xMeters, double yMeters, double zMeters, Rotation3d rotation) {
     m_objects.get(0).setPose(xMeters, yMeters, zMeters, rotation);
   }
 

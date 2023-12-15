@@ -65,7 +65,7 @@ public class Vector2d {
     return dot(vec) / vec.magnitude();
   }
 
-  public double cross(Vector2d other){
-    return this.x*other.y - this.y*other.x;
+  public double cross(Vector2d other) {
+    return this.x * other.y - this.y * other.x;
   }
 }

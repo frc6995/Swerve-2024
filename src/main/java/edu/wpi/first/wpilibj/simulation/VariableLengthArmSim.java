@@ -39,7 +39,7 @@ public class VariableLengthArmSim extends LinearSystemSim<N2, N1, N1> {
   // Whether the simulator should simulate gravity.
   private final boolean m_simulateGravity;
 
-  private double m_gravityAngle = -Math.PI/2;
+  private double m_gravityAngle = -Math.PI / 2;
 
   /**
    * Creates a simulated arm mechanism.
@@ -261,6 +261,7 @@ public class VariableLengthArmSim extends LinearSystemSim<N2, N1, N1> {
   public void setCGRadius(double radius) {
     m_r = radius;
   }
+
   /**
    * Updates the state of the arm.
    *
@@ -314,25 +315,29 @@ public class VariableLengthArmSim extends LinearSystemSim<N2, N1, N1> {
   private double getB11() {
     return m_gearing * m_gearbox.KtNMPerAmp / (m_gearbox.rOhms * m_moi);
   }
+
   public double getkG(double angle) {
     return m_armMass
-    * m_r
-    * -9.8
-    * Math.sin(angle - m_gravityAngle)
-    * (m_gearbox.rOhms)
-    / (m_gearing * m_gearbox.KtNMPerAmp);
-     
+        * m_r
+        * -9.8
+        * Math.sin(angle - m_gravityAngle)
+        * (m_gearbox.rOhms)
+        / (m_gearing * m_gearbox.KtNMPerAmp);
   }
 
   public void setMOI(double moi) {
     // recalculating only the relevant entries in the plant
     m_moi = moi;
-    m_plant.getA().set(1, 1, 
-      -m_gearing * m_gearing
-      * m_gearbox.KtNMPerAmp
-      / (m_gearbox.KvRadPerSecPerVolt * m_gearbox.rOhms * m_moi));
-    m_plant.getB().set(1, 0, 
-    m_gearing * m_gearbox.KtNMPerAmp / (m_gearbox.rOhms * m_moi));
+    m_plant
+        .getA()
+        .set(
+            1,
+            1,
+            -m_gearing
+                * m_gearing
+                * m_gearbox.KtNMPerAmp
+                / (m_gearbox.KvRadPerSecPerVolt * m_gearbox.rOhms * m_moi));
+    m_plant.getB().set(1, 0, m_gearing * m_gearbox.KtNMPerAmp / (m_gearbox.rOhms * m_moi));
   }
 
   public void setGravityAngle(double angleRadians) {
