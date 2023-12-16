@@ -4,12 +4,16 @@ import static frc.robot.Constants.DriveConstants.*;
 
 import autolog.AutoLog.BothLog;
 import autolog.Logged;
+import com.pathplanner.lib.commands.FollowPathHolonomic;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.path.PathPlannerTrajectory;
+import com.pathplanner.lib.path.RotationTarget;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -81,6 +85,13 @@ public class DrivebaseS extends SubsystemBase implements Logged {
           0.02,
           Units.feetToMeters(MAX_MODULE_SPEED_FPS),
           ModuleConstants.FL.centerOffset.getNorm());
+  public final HolonomicPathFollowerConfig m_pathPlannerConfig =
+      new HolonomicPathFollowerConfig(
+          new PIDConstants(8, 0, 0),
+          new PIDConstants(4, 0, 0),
+          Units.feetToMeters(MAX_MODULE_SPEED_FPS),
+          ModuleConstants.FL.centerOffset.getNorm(),
+          new ReplanningConfig(false, false, 0.1, 0.1));
 
   private final SwerveDriveKinematics m_kinematics =
       new SwerveDriveKinematics(
@@ -478,25 +489,28 @@ public class DrivebaseS extends SubsystemBase implements Logged {
                 }));
   }
 
-  // /**
-  //  * Command factory to drive a PathPlanner path.
-  //  * Paths are assumed to be created on the blue side, and will be automatically flipped.
-  //  * @param path the path to run.
-  //  * @return
-  //  */
-  // public Command pathPlannerCommand(PathPlannerTrajectory path) {
-  //     FollowPathHolonomic command = new FollowPathHolonomic(
-  //             path,
-  //             this::getPose,
-  //             m_xController,
-  //             m_yController,
-  //             m_thetaController,
+  public ChassisSpeeds getRobotRelativeChassisSpeeds() {
+    return m_kinematics.toChassisSpeeds(getModuleStates());
+  }
 
-  //             this::drive,
-  //             true,
-  //             this);
-  //     return command;
-  // }
+  /**
+   * Command factory to drive a PathPlanner path. Paths are assumed to be created on the blue side,
+   * and will be automatically flipped.
+   *
+   * @param path the path to run.
+   * @return
+   */
+  public Command pathPlannerCommand(PathPlannerPath path) {
+    FollowPathHolonomic command =
+        new FollowPathHolonomic(
+            path,
+            this::getPose,
+            this::getRobotRelativeChassisSpeeds,
+            this::drive,
+            this.m_pathPlannerConfig,
+            this);
+    return command;
+  }
 
   /**
    * For use with PPChasePoseCommand Generates a PathPlannerTrajectory on the fly to drive to the
@@ -521,9 +535,9 @@ public class DrivebaseS extends SubsystemBase implements Logged {
                 List.of(
                     new Pose2d(robotPose.getTranslation(), robotToTargetTranslation.getAngle()),
                     new Pose2d(target.getTranslation(), robotToTargetTranslation.getAngle()))),
-            List.of(),
-            // List.of(new RotationTarget(0, robotPose.getRotation()),
-            //     new RotationTarget(1, target.getRotation())),
+            List.of(
+                new RotationTarget(0, robotPose.getRotation()),
+                new RotationTarget(1, target.getRotation(), true)),
             List.of(),
             List.of(),
             // Start point. At the position of the robot, initial travel direction toward
@@ -533,8 +547,7 @@ public class DrivebaseS extends SubsystemBase implements Logged {
             constraints,
             new GoalEndState(0, target.getRotation()),
             false);
-
-    return new PathPlannerTrajectory(pathPlannerTrajectory, currentSpeeds);
+    return new PathPlannerTrajectory(pathPlannerTrajectory, currentSpeeds, robotPose.getRotation());
   }
 
   /**
